@@ -1,0 +1,75 @@
+{{define "weekly.html"}}
+{{template "header" .}}
+<main class="container">
+  <section class="page-head">
+    <div>
+      <div class="eyebrow">WEEKLY RECAP</div>
+      <h1>{{.Start.Format "Mon, 02 Jan"}} → {{.End.Format "Mon, 02 Jan 2006"}}</h1>
+      <div class="muted">{{.KPIs.Total}} events across 7 days</div>
+    </div>
+    <div class="date-nav">
+      <a class="btn ghost" href="/weekly?start={{fmtDateISO .Prev}}">← prev week</a>
+      <a class="btn ghost" href="/weekly?start={{fmtDateISO .Next}}">next week →</a>
+    </div>
+  </section>
+
+  {{template "kpi_strip" .KPIs}}
+
+  <section class="card">
+    <div class="card-head"><h2>Activity by day</h2></div>
+    <div class="bars">
+      {{$max := 1}}
+      {{range .Chart}}{{if gt .Total $max}}{{$max = .Total}}{{end}}{{end}}
+      {{range .Chart}}
+        <a href="/daily?date={{fmtDateISO .Day}}" class="bar-col" title="{{fmtDate .Day}} · {{.Total}} events">
+          <div class="bar-stack">
+            {{range $k, $v := .Counts}}
+              <div class="bar-seg src-{{$k}}" style="height: {{percent $v $max}}%" title="{{$k}}: {{$v}}"></div>
+            {{end}}
+          </div>
+          <div class="bar-label">{{.Day.Format "Mon 02"}}</div>
+          <div class="bar-total">{{.Total}}</div>
+        </a>
+      {{end}}
+    </div>
+  </section>
+
+  <section class="grid two">
+    <div class="card">
+      <div class="card-head">
+        <h2>AI weekly recap</h2>
+        <button class="btn small"
+                hx-post="/api/summary?key={{.SummaryKey}}"
+                hx-target="#summary-block"
+                hx-swap="innerHTML"
+                hx-indicator="#summary-spinner">
+          <span id="summary-spinner" class="htmx-indicator">⟳</span>
+          {{if .Summary}}Regenerate{{else}}Generate{{end}}
+        </button>
+      </div>
+      <div id="summary-block">
+        {{if .Summary}}
+          <div class="summary">
+            <div class="summary-body markdown">{{safeMD .Summary}}</div>
+            <div class="summary-foot">Generated {{fmtRelative .SummaryAt}} · key <code>{{.SummaryKey}}</code></div>
+          </div>
+        {{else}}
+          <div class="empty">No AI recap yet. Click <strong>Generate</strong>.</div>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>All events</h2></div>
+      {{if .Events}}
+        <ul class="event-list">
+          {{range .Events}}{{template "event_row" .}}{{end}}
+        </ul>
+      {{else}}
+        <div class="empty">No events in this range.</div>
+      {{end}}
+    </div>
+  </section>
+</main>
+{{template "footer" .}}
+{{end}}

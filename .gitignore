@@ -1,0 +1,36 @@
+# --- secrets ---
+.env
+.env.local
+.env.*.local
+
+# OAuth client credentials (downloaded from Google Cloud Console)
+gmail_credentials.json
+client_secret_*.json
+credentials.json
+*credentials*.json
+
+# OAuth access/refresh tokens
+gmail_token.json
+*token*.json
+
+# --- runtime data ---
+data/
+server.log
+*.log
+
+# --- build artifacts ---
+personal-ai-dashboard
+duh-ai
+duh.ai
+
+# --- SQLite ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- editor / OS ---
+.DS_Store
+.vscode/
+.idea/
+*.swp

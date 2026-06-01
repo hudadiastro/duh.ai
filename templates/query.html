@@ -1,0 +1,69 @@
+{{define "query.html"}}
+{{template "header" .}}
+<main class="container">
+  <section class="page-head">
+    <div>
+      <div class="eyebrow">CUSTOM QUERY</div>
+      <h1>Search your activity</h1>
+      <div class="muted">{{.KPIs.Total}} events match</div>
+    </div>
+  </section>
+
+  <form class="filter-form card" method="get" action="/query">
+    <div class="row">
+      <label>From <input type="date" name="from" value="{{fmtDateISO .From}}"></label>
+      <label>To <input type="date" name="to" value="{{fmtDateISO .To}}"></label>
+      <label class="grow">Search title/project
+        <input type="text" name="q" value="{{.Q}}" placeholder="e.g. JIRA-123, refactor, astro-search-be">
+      </label>
+      <label>Status
+        <input type="text" name="status" value="{{.Status}}" placeholder="e.g. In Progress">
+      </label>
+    </div>
+    <div class="row sources">
+      <span class="lbl">Sources:</span>
+      {{range .AllSources}}
+        {{$src := .}}
+        <label class="chip-check">
+          <input type="checkbox" name="source" value="{{$src}}"
+                 {{range $.Sources}}{{if eq . $src}}checked{{end}}{{end}}>
+          {{sourceLabel $src}}
+        </label>
+      {{end}}
+      <button class="btn primary" type="submit">Apply</button>
+      <a class="btn ghost" href="/query">Reset</a>
+    </div>
+  </form>
+
+  {{template "kpi_strip" .KPIs}}
+
+  <section class="card">
+    <div class="card-head"><h2>Results</h2></div>
+    {{if .Events}}
+      <ul class="event-list">
+        {{range .Events}}{{template "event_row_date" .}}{{end}}
+      </ul>
+    {{else}}
+      <div class="empty">No matching events. Try widening the date range or removing filters.</div>
+    {{end}}
+  </section>
+</main>
+{{template "footer" .}}
+{{end}}
+
+{{define "event_row_date"}}
+<li class="event src-{{.Source}}">
+  <div class="event-icon">{{sourceIcon .Source}}</div>
+  <div class="event-body">
+    <div class="event-title">
+      {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{else}}{{.Title}}{{end}}
+    </div>
+    <div class="event-meta">
+      <span class="src-tag">{{sourceLabel .Source}}</span>
+      {{if .Project}}<span class="project">{{truncate .Project 48}}</span>{{end}}
+      {{if .Status}}<span class="status">{{.Status}}</span>{{end}}
+      <span class="time">{{.OccurredAt.Format "2006-01-02 15:04"}}</span>
+    </div>
+  </div>
+</li>
+{{end}}

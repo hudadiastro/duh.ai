@@ -1,0 +1,129 @@
+{{define "header"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.Title}} · duh.ai</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">✦</span>
+      <span>duh.ai</span>
+    </div>
+    <nav class="nav">
+      <a href="/daily" {{if hasPrefix .Title "Daily"}}class="active"{{end}}>Daily</a>
+      <a href="/weekly" {{if hasPrefix .Title "Weekly"}}class="active"{{end}}>Weekly</a>
+      <a href="/query" {{if hasPrefix .Title "Query"}}class="active"{{end}}>Query</a>
+    </nav>
+    <div class="actions">
+      <button class="btn"
+              hx-post="/api/refresh"
+              hx-target="#refresh-results"
+              hx-swap="innerHTML"
+              hx-indicator="#refresh-spinner">
+        <span id="refresh-spinner" class="htmx-indicator">⟳</span>
+        Refresh sources
+      </button>
+    </div>
+  </header>
+  <div id="refresh-results" class="refresh-results"></div>
+{{end}}
+
+{{define "footer"}}
+  <footer class="footer">
+    <div class="connectors">
+      <span class="chip {{if .GmailAuthorized}}ok{{else if .GmailConfigured}}warn{{else}}off{{end}}">
+        Gmail/Jira:
+        {{if .GmailAuthorized}}connected{{else if .GmailConfigured}}<a href="/oauth/gmail/start">authorize →</a>{{else}}not configured{{end}}
+      </span>
+      <span class="chip {{if .GmailAuthorized}}ok{{else if .GmailConfigured}}warn{{else}}off{{end}}">
+        Calendar:
+        {{if .GmailAuthorized}}connected{{else if .GmailConfigured}}<a href="/oauth/gmail/start">authorize →</a>{{else}}not configured{{end}}
+      </span>
+      <span class="chip {{if .GitHubConfigured}}ok{{else}}off{{end}}">
+        GitHub: {{if .GitHubConfigured}}connected{{else}}not configured{{end}}
+      </span>
+      <span class="chip ok">Claude Code: local</span>
+    </div>
+    <div class="legal">duh.ai · local-only standup helper · built with Claude Code</div>
+  </footer>
+</body>
+</html>
+{{end}}
+
+{{define "kpi_strip"}}
+<section class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">Total events</div>
+    <div class="kpi-value">{{.Total}}</div>
+  </div>
+  {{range .BySource}}
+  <div class="kpi src-{{.Source}}">
+    <div class="kpi-label">{{.Icon}} {{.Label}}</div>
+    <div class="kpi-value">{{.Count}}</div>
+  </div>
+  {{end}}
+  {{if .UniqueRepos}}
+  <div class="kpi">
+    <div class="kpi-label">Repos touched</div>
+    <div class="kpi-value">{{.UniqueRepos}}</div>
+  </div>
+  {{end}}
+  {{if .UniqueTickets}}
+  <div class="kpi">
+    <div class="kpi-label">Tickets touched</div>
+    <div class="kpi-value">{{.UniqueTickets}}</div>
+  </div>
+  {{end}}
+  {{if .Meetings}}
+  <div class="kpi">
+    <div class="kpi-label">Meetings</div>
+    <div class="kpi-value">{{.Meetings}}</div>
+  </div>
+  {{end}}
+  {{if .OutputTokens}}
+  <div class="kpi">
+    <div class="kpi-label">Claude tokens out</div>
+    <div class="kpi-value">{{.OutputTokens}}</div>
+  </div>
+  {{end}}
+</section>
+{{end}}
+
+{{define "event_row"}}
+<li class="event src-{{.Source}}">
+  <div class="event-icon">{{sourceIcon .Source}}</div>
+  <div class="event-body">
+    <div class="event-title">
+      {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{else}}{{.Title}}{{end}}
+    </div>
+    <div class="event-meta">
+      <span class="src-tag">{{sourceLabel .Source}}</span>
+      {{if .Project}}<span class="project">{{truncate .Project 48}}</span>{{end}}
+      {{if .Status}}<span class="status">{{.Status}}</span>{{end}}
+      <span class="time">{{fmtTime .OccurredAt}}</span>
+    </div>
+  </div>
+</li>
+{{end}}
+
+{{define "summary_block.html"}}
+<div class="summary">
+  <div class="summary-body markdown">{{safeMD .Summary}}</div>
+  <div class="summary-foot">Generated {{fmtRelative .SummaryAt}} · key <code>{{.SummaryKey}}</code></div>
+</div>
+{{end}}
+
+{{define "refresh_results.html"}}
+<div class="refresh-toast">
+  {{range .}}
+    <div class="toast {{if .Err}}err{{else}}ok{{end}}">
+      <strong>{{sourceLabel .Source}}</strong>
+      {{if .Err}}× {{.Err}}{{else}}✓ {{.Count}} events ingested{{end}}
+    </div>
+  {{end}}
+</div>
+{{end}}

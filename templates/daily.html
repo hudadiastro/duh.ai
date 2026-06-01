@@ -1,0 +1,93 @@
+{{define "daily.html"}}
+{{template "header" .}}
+<main class="container">
+  <section class="page-head">
+    <div>
+      <div class="eyebrow">DAILY DIGEST</div>
+      <h1>{{fmtDate .Date}}</h1>
+      <div class="muted">{{.KPIs.Total}} activity events recorded</div>
+    </div>
+    <div class="date-nav">
+      <a class="btn ghost" href="/daily?date={{fmtDateISO .Prev}}">←</a>
+      <input type="date" value="{{fmtDateISO .Date}}"
+             onchange="location.href='/daily?date='+this.value">
+      <a class="btn ghost" href="/daily?date={{fmtDateISO .Next}}">→</a>
+      <a class="btn ghost" href="/daily?date={{fmtDateISO .Today}}">Today</a>
+    </div>
+  </section>
+
+  <form class="filter-bar" method="get" action="/daily">
+    <input type="hidden" name="date" value="{{fmtDateISO .Date}}">
+    <span class="lbl">Show:</span>
+    {{range .AllSources}}
+      {{$src := .}}
+      <label class="chip-check">
+        <input type="checkbox" name="source" value="{{$src}}"
+               {{if $.SourceSelected}}{{range $.Sources}}{{if eq . $src}}checked{{end}}{{end}}{{else}}checked{{end}}
+               onchange="this.form.submit()">
+        {{sourceLabel $src}}
+      </label>
+    {{end}}
+    {{if .SourceSelected}}<a class="btn ghost small" href="/daily?date={{fmtDateISO .Date}}">Reset</a>{{end}}
+  </form>
+
+  {{template "kpi_strip" .KPIs}}
+
+  <section class="grid two">
+    <div class="card">
+      <div class="card-head">
+        <h2>AI stand-up summary</h2>
+        <button class="btn small"
+                hx-post="/api/summary?key={{.SummaryKey}}"
+                hx-target="#summary-block"
+                hx-swap="innerHTML"
+                hx-indicator="#summary-spinner">
+          <span id="summary-spinner" class="htmx-indicator">⟳</span>
+          {{if .Summary}}Regenerate{{else}}Generate{{end}}
+        </button>
+      </div>
+      <div id="summary-block">
+        {{if .Summary}}
+          <div class="summary">
+            <div class="summary-body markdown">{{safeMD .Summary}}</div>
+            <div class="summary-foot">Generated {{fmtRelative .SummaryAt}} · key <code>{{.SummaryKey}}</code></div>
+          </div>
+        {{else}}
+          <div class="empty">No AI summary generated yet. Click <strong>Generate</strong> — the dashboard will pipe today's activity into <code>claude -p</code> locally.</div>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Activity feed</h2></div>
+      {{if .Events}}
+        <ul class="event-list">
+          {{range .Events}}{{template "event_row" .}}{{end}}
+        </ul>
+      {{else}}
+        <div class="empty">No events for this day. Hit <em>Refresh sources</em> at the top to pull recent data.</div>
+      {{end}}
+    </div>
+  </section>
+
+  {{if .RefreshStatuses}}
+  <section class="card">
+    <div class="card-head"><h2>Connector status</h2></div>
+    <table class="conn-table">
+      <thead><tr><th>Source</th><th>Last refresh</th><th>Status</th><th>Message</th></tr></thead>
+      <tbody>
+        {{range .RefreshStatuses}}
+        <tr>
+          <td>{{sourceLabel .Source}}</td>
+          <td>{{fmtRelative .LastRunAt}}</td>
+          <td>{{if eq .Status "ok"}}<span class="badge ok">ok</span>{{else}}<span class="badge err">error</span>{{end}}</td>
+          <td class="muted small">{{.Message}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </section>
+  {{end}}
+</main>
+{{template "footer" .}}
+{{end}}
