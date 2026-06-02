@@ -16,6 +16,7 @@
   --github: #8ab4f8;
   --jira: #2684ff;
   --calendar: #34d399;
+  --note: #fbbf24;
 }
 
 * { box-sizing: border-box; }
@@ -79,6 +80,7 @@ code { font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mo
 .kpi.src-github .kpi-label { color: var(--github); }
 .kpi.src-jira .kpi-label { color: var(--jira); }
 .kpi.src-calendar .kpi-label { color: var(--calendar); }
+.kpi.src-note .kpi-label { color: var(--note); }
 
 /* ---- cards & grid ---- */
 .grid { display: grid; gap: 20px; }
@@ -101,6 +103,7 @@ code { font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mo
 .event.src-github .event-icon { color: var(--github); background: #8ab4f814; }
 .event.src-jira .event-icon { color: var(--jira); background: #2684ff14; }
 .event.src-calendar .event-icon { color: var(--calendar); background: #34d39914; }
+.event.src-note .event-icon { color: var(--note); background: #fbbf2414; }
 .event-body { flex: 1; min-width: 0; }
 .event-title { font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-title a { color: var(--text); }
@@ -131,8 +134,31 @@ code { font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mo
 .bar-seg.src-github { background: var(--github); }
 .bar-seg.src-jira { background: var(--jira); }
 .bar-seg.src-calendar { background: var(--calendar); }
+.bar-seg.src-note { background: var(--note); }
 .bar-label { font-size: 11px; color: var(--muted); }
 .bar-total { font-size: 13px; color: var(--text); font-weight: 600; }
+
+/* ---- note input form ---- */
+.note-form { display: flex; gap: 8px; align-items: center; padding: 6px 0 14px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.note-form input[type="text"] {
+  flex: 1; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; font-family: inherit; font-size: 13px;
+}
+.note-form input[type="text"]:focus { outline: none; border-color: var(--note); }
+.note-form input[type="text"]::placeholder { color: var(--muted-2); }
+
+/* delete button on note rows */
+.event { position: relative; }
+.event-delete {
+  background: transparent; border: none; color: var(--muted-2);
+  cursor: pointer; padding: 4px 8px; border-radius: 4px;
+  font-size: 18px; line-height: 1; margin-left: 6px;
+  align-self: center; opacity: 0;
+  transition: opacity 100ms, color 100ms;
+}
+.event:hover .event-delete { opacity: 1; }
+.event-delete:hover { color: var(--err); background: var(--surface-2); }
 
 /* ---- inline filter bar (daily page) ---- */
 .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; }

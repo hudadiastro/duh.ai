@@ -84,6 +84,12 @@
     <div class="kpi-value">{{.Meetings}}</div>
   </div>
   {{end}}
+  {{if .Notes}}
+  <div class="kpi">
+    <div class="kpi-label">Notes</div>
+    <div class="kpi-value">{{.Notes}}</div>
+  </div>
+  {{end}}
   {{if .OutputTokens}}
   <div class="kpi">
     <div class="kpi-label">Claude tokens out</div>
@@ -107,6 +113,14 @@
       <span class="time">{{fmtTime .OccurredAt}}</span>
     </div>
   </div>
+  {{if eq .Source "note"}}
+    <button class="event-delete"
+            title="Delete note"
+            hx-post="/api/notes/delete?id={{.ID}}"
+            hx-target="closest li"
+            hx-swap="outerHTML"
+            hx-confirm="Delete this note?">×</button>
+  {{end}}
 </li>
 {{end}}
 

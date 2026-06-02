@@ -60,12 +60,22 @@
 
     <div class="card">
       <div class="card-head"><h2>Activity feed</h2></div>
-      {{if .Events}}
-        <ul class="event-list">
-          {{range .Events}}{{template "event_row" .}}{{end}}
-        </ul>
-      {{else}}
-        <div class="empty">No events for this day. Hit <em>Refresh sources</em> at the top to pull recent data.</div>
+
+      <form class="note-form"
+            hx-post="/api/notes"
+            hx-target="#event-list"
+            hx-swap="afterbegin"
+            hx-on::after-request="if(event.detail.successful){this.reset();document.getElementById('empty-state')?.remove();}">
+        <input type="hidden" name="date" value="{{fmtDateISO .Date}}">
+        <input type="text" name="title" placeholder="✎ Add a quick note (e.g. checked payment prod issue)" required autocomplete="off">
+        <button type="submit" class="btn small primary">Add</button>
+      </form>
+
+      <ul id="event-list" class="event-list">
+        {{range .Events}}{{template "event_row" .}}{{end}}
+      </ul>
+      {{if not .Events}}
+        <div id="empty-state" class="empty">No events for this day yet. Add a note above or hit <em>Refresh sources</em> at the top.</div>
       {{end}}
     </div>
   </section>

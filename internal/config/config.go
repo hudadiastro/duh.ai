@@ -21,6 +21,7 @@ type Config struct {
 	JiraSenderFilter   string
 	JiraBaseURL        string
 	OAuthRedirectURL   string
+	CalendarExcludes   []string // case-insensitive substrings; events whose title matches any are skipped
 }
 
 func Load() (*Config, error) {
@@ -44,9 +45,23 @@ func Load() (*Config, error) {
 		JiraSenderFilter:   getenv("JIRA_SENDER_FILTER", "atlassian.net"),
 		JiraBaseURL:        strings.TrimRight(getenv("JIRA_BASE_URL", "https://astronauts-id.atlassian.net"), "/"),
 		OAuthRedirectURL:   getenv("OAUTH_REDIRECT_URL", "http://localhost:8090/oauth/gmail/callback"),
+		CalendarExcludes: splitList(getenv("CALENDAR_EXCLUDE",
+			"Lunch,Focus time,Daily Standup,Home,Out of office,OOO")),
 	}
 
 	return cfg, nil
+}
+
+func splitList(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func (c *Config) GmailConfigured() bool {

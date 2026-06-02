@@ -3,6 +3,7 @@ package calendar
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	calapi "google.golang.org/api/calendar/v3"
@@ -15,10 +16,13 @@ import (
 // Client reuses the Gmail OAuth flow (same Google project + token) to pull
 // calendar events the user attended or was invited to.
 type Client struct {
-	Auth *gmail.Client // shared OAuth token source
+	Auth     *gmail.Client // shared OAuth token source
+	Excludes []string      // case-insensitive substrings; titles matching any are skipped
 }
 
-func New(auth *gmail.Client) *Client { return &Client{Auth: auth} }
+func New(auth *gmail.Client, excludes []string) *Client {
+	return &Client{Auth: auth, Excludes: excludes}
+}
 
 // HasToken delegates to the underlying gmail client.
 func (c *Client) HasToken() bool { return c.Auth != nil && c.Auth.HasToken() }
@@ -68,6 +72,9 @@ func (c *Client) Ingest(ctx context.Context, s *store.Store, lookbackDays int) (
 			if title == "" {
 				title = "(no title)"
 			}
+			if c.titleExcluded(title) {
+				continue
+			}
 			status := rsvpStatus(ev)
 
 			meta := map[string]any{
@@ -103,6 +110,19 @@ func (c *Client) Ingest(ctx context.Context, s *store.Store, lookbackDays int) (
 		pageToken = resp.NextPageToken
 	}
 	return written, nil
+}
+
+func (c *Client) titleExcluded(title string) bool {
+	if len(c.Excludes) == 0 {
+		return false
+	}
+	low := strings.ToLower(title)
+	for _, pat := range c.Excludes {
+		if strings.Contains(low, strings.ToLower(pat)) {
+			return true
+		}
+	}
+	return false
 }
 
 func eventStart(ev *calapi.Event) (time.Time, bool) {

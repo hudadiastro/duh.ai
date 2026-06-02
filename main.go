@@ -73,7 +73,7 @@ func main() {
 	if cfg.GmailConfigured() {
 		app.gmail = gmail.New(cfg.GmailCredsPath, cfg.GmailTokenPath, cfg.OAuthRedirectURL, cfg.JiraSenderFilter, cfg.JiraBaseURL)
 		app.agg.Gmail = app.gmail
-		app.agg.Calendar = calendar.New(app.gmail)
+		app.agg.Calendar = calendar.New(app.gmail, cfg.CalendarExcludes)
 	}
 
 	if err := app.loadTemplates(); err != nil {
@@ -90,6 +90,8 @@ func main() {
 	mux.HandleFunc("/query", app.handleQuery)
 	mux.HandleFunc("/api/refresh", app.handleRefresh)
 	mux.HandleFunc("/api/summary", app.handleSummary)
+	mux.HandleFunc("/api/notes", app.handleNotes)
+	mux.HandleFunc("/api/notes/delete", app.handleDeleteNote)
 	mux.HandleFunc("/oauth/gmail/start", app.handleOAuthStart)
 	mux.HandleFunc("/oauth/gmail/callback", app.handleOAuthCallback)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
@@ -207,7 +209,7 @@ func (a *App) handleDaily(w http.ResponseWriter, r *http.Request) {
 		"SummaryKey":      "daily:" + from.Format("2006-01-02"),
 		"Summary":         cachedSummary,
 		"SummaryAt":       summaryTS,
-		"AllSources":      []string{"claude_code", "github", "jira", "calendar"},
+		"AllSources":      []string{"claude_code", "github", "jira", "calendar", "note"},
 		"Sources":         sources,
 		"SourceSelected":  len(sources) > 0,
 	})
@@ -288,7 +290,7 @@ func (a *App) handleQuery(w http.ResponseWriter, r *http.Request) {
 		"Q":          q.Get("q"),
 		"Events":     events,
 		"KPIs":       summarizeKPIs(events),
-		"AllSources": []string{"claude_code", "github", "jira", "calendar"},
+		"AllSources": []string{"claude_code", "github", "jira", "calendar", "note"},
 	})
 }
 
@@ -334,6 +336,62 @@ func (a *App) handleSummary(w http.ResponseWriter, r *http.Request) {
 		"SummaryAt":  time.Now(),
 		"SummaryKey": key,
 	})
+}
+
+func (a *App) handleNotes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		http.Error(w, "title is required", 400)
+		return
+	}
+	date := parseDate(r.FormValue("date"), time.Now())
+	project := strings.TrimSpace(r.FormValue("project"))
+
+	// Stamp with viewed date + current clock time. So a note added now
+	// while viewing yesterday becomes "yesterday at 17:42".
+	now := time.Now().In(time.Local)
+	ts := time.Date(date.Year(), date.Month(), date.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.Local)
+
+	id := fmt.Sprintf("note:%d-%s", ts.UnixNano(), randomHex(3))
+	e := store.Event{
+		ID:         id,
+		Source:     "note",
+		Kind:       "note",
+		OccurredAt: ts,
+		Title:      title,
+		Project:    project,
+	}
+	if err := a.store.UpsertEvent(r.Context(), e); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	a.renderPartial(w, "event_row", e)
+}
+
+func (a *App) handleDeleteNote(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+	id := r.URL.Query().Get("id")
+	if !strings.HasPrefix(id, "note:") {
+		http.Error(w, "can only delete notes", 400)
+		return
+	}
+	if err := a.store.DeleteEvent(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(200)
 }
 
 func (a *App) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
@@ -425,6 +483,7 @@ type KPIs struct {
 	UniqueRepos       int
 	UniqueTickets     int
 	Meetings          int
+	Notes             int
 	AssistantMessages int
 	InputTokens       int
 	OutputTokens      int
@@ -455,6 +514,8 @@ func summarizeKPIs(events []store.Event) KPIs {
 			}
 		case "calendar":
 			out.Meetings++
+		case "note":
+			out.Notes++
 		case "claude_code":
 			if m, ok := e.Meta["assistant_msgs"].(float64); ok {
 				out.AssistantMessages += int(m)
@@ -511,6 +572,8 @@ func sourceLabel(s string) string {
 		return "Jira"
 	case "calendar":
 		return "Calendar"
+	case "note":
+		return "Note"
 	}
 	return s
 }
@@ -525,6 +588,8 @@ func sourceIcon(s string) string {
 		return "◈"
 	case "calendar":
 		return "▣"
+	case "note":
+		return "✎"
 	}
 	return "•"
 }

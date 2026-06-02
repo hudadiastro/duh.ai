@@ -163,6 +163,11 @@ ORDER BY day ASC`,
 	return out, rows.Err()
 }
 
+func (s *Store) DeleteEvent(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM events WHERE id = ?`, id)
+	return err
+}
+
 func (s *Store) SaveSummary(ctx context.Context, key, body string) error {
 	_, err := s.db.ExecContext(ctx, `
 INSERT INTO summaries(key, body, generated_at) VALUES(?, ?, ?)
